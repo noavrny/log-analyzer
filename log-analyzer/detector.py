@@ -3,6 +3,7 @@ import datetime as dt
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from parser import *
+import re
 
 class Alert:
     type:str
@@ -58,8 +59,56 @@ def user_agent_detector(logs:list):
                 break
     return alertList
 
+def directory_scan_detector(logs:list,window_seconds:int,treshold:int):
+    alertList = []
+    d = defaultdict(list)
+    suspicious_logs = [l for l in logs if l.status == 404]
+    for log in suspicious_logs:
+        d[log.ip].append(log)
+    for ip in d:
+        timeList = []
+        for log in d[ip]:
+            timeList.append((log.timestamp,log))
+        timeList.sort(key=lambda x: x[0])
+        for i, ts in enumerate(timeList):
+            window = [l for l in timeList[i:] if (l[0] - ts[0]).total_seconds() <= window_seconds]
+            unique_paths = len(set(log[1].request for log in window))
+            if unique_paths >=treshold and len(window) >=treshold:
+                if (len(window) >= 20):
+                    severity = "HIGH"
+                elif len(window) >= 10:
+                    severity = "MEDIUM"
+                else:
+                    severity = "LOW"
+                alertList.append(Alert("directory_scan",severity,ip,f"Directory scan by {ip} with {len(window)} requests | SEVERITY : {severity}",d[ip]))
+                break
+    return alertList
+
+SQL_PATTERNS = [
+    (re.compile(r"union[\s\+%20]+select", re.IGNORECASE), "HIGH"),
+    (re.compile(r"'\s*(or|and)\s*'?\d+'?\s*=\s*'?\d+", re.IGNORECASE), "HIGH"),
+    (re.compile(r"(sleep|benchmark|waitfor\s+delay)\s*\(", re.IGNORECASE), "HIGH"),
+    (re.compile(r";\s*(drop|insert|update|delete)\s+", re.IGNORECASE), "HIGH"),
+    (re.compile(r"(--|#|/\*)", re.IGNORECASE), "LOW"),
+    (re.compile(r"xp_cmdshell", re.IGNORECASE), "HIGH"),
+]
+
+def sql_injection_detector(logs:list):
+    alertList = []
+    for log in logs:
+        for pattern in SQL_PATTERNS:
+            m = pattern[0].search(log.request)
+            if not m:
+                continue
+            else:
+                alertList.append(Alert("sql_injection",pattern[1],log.ip,f"SQL injection attack by {log.ip} | SEVERITY : {pattern[1]}",[log]))
+                break
+    return alertList
+
 logs = parse_file("samples/test.log",1)
 alertlist = brute_force_detector(logs,15,5)
 alertlist = alertlist + user_agent_detector(logs)
+alertlist = alertlist + directory_scan_detector(logs,15,5)
+alertlist = alertlist + sql_injection_detector(logs)
 for a in alertlist:
     print(a.description)
