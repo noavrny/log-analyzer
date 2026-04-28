@@ -41,12 +41,25 @@ def brute_force_detector(logs:list,window_seconds :int,treshold:int):
                     severity = "MEDIUM"
                 else:
                     severity = "LOW"
-                alertList.append(Alert("brute_force",severity,ip,f"Brute-force attack by {ip} with {len(window)} requests",d[ip]))
+                alertList.append(Alert("brute_force",severity,ip,f"Brute-force attack by {ip} with {len(window)} requests | SEVERITY : {severity}",d[ip]))
+                break
+    return alertList
+
+KNOWN_SUSPICIOUS_UA = ["sqlmap", "nikto", "masscan", "nmap", "burpsuite", "zgrab", "nuclei", "dirbuster"]
+
+def user_agent_detector(logs:list):
+    alertList = []
+    ua_logs = [l for l in logs if l.user_agent != None]
+    for log in ua_logs:
+        ua = log.user_agent.lower()
+        for tool in KNOWN_SUSPICIOUS_UA:
+            if tool in ua:
+                alertList.append(Alert("user_agent","LOW",log.ip,f"User-agent reconnaissance attack by {log.ip} using {ua}",[log]))
                 break
     return alertList
 
 logs = parse_file("samples/test.log",1)
 alertlist = brute_force_detector(logs,15,5)
-print(len(alertlist))
+alertlist = alertlist + user_agent_detector(logs)
 for a in alertlist:
     print(a.description)
