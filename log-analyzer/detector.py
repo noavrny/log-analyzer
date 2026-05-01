@@ -80,7 +80,7 @@ def directory_scan_detector(logs:list,window_seconds:int,treshold:int):
                     severity = "MEDIUM"
                 else:
                     severity = "LOW"
-                alertList.append(Alert("directory_scan",severity,ip,f"Directory scan by {ip} with {len(window)} requests | SEVERITY : {severity}",d[ip]))
+                alertList.append(Alert("directory_scan",severity,ip,f"Directory scan by {ip} with {len(window)} requests",d[ip]))
                 break
     return alertList
 
@@ -101,14 +101,13 @@ def sql_injection_detector(logs:list):
             if not m:
                 continue
             else:
-                alertList.append(Alert("sql_injection",pattern[1],log.ip,f"SQL injection attack by {log.ip} | SEVERITY : {pattern[1]}",[log]))
+                alertList.append(Alert("sql_injection",pattern[1],log.ip,f"SQL injection attack by {log.ip}",[log]))
                 break
     return alertList
 
-logs = parse_file("samples/test.log",1)
-alertlist = brute_force_detector(logs,15,5)
-alertlist = alertlist + user_agent_detector(logs)
-alertlist = alertlist + directory_scan_detector(logs,15,5)
-alertlist = alertlist + sql_injection_detector(logs)
-for a in alertlist:
-    print(a.description)
+def main_detector(logs:list):
+    alertList = brute_force_detector(logs,15,5)
+    alertList += user_agent_detector(logs)
+    alertList += directory_scan_detector(logs,15,5)
+    alertList += sql_injection_detector(logs)
+    return alertList

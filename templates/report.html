@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Report — Log Analyzer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:       #0d0c0b;
+            --surface:  #131211;
+            --surface2: #1a1917;
+            --border:   #242220;
+            --border2:  #2f2d29;
+            --text:     #b8b2aa;
+            --text-dim: #5a5550;
+            --text-hi:  #e2dbd2;
+            --accent:   #e07b3a;
+            --high:     #d93025;
+            --high-bg:  rgba(217,48,37,0.08);
+            --high-bd:  rgba(217,48,37,0.22);
+            --med:      #d4920a;
+            --med-bg:   rgba(212,146,10,0.08);
+            --med-bd:   rgba(212,146,10,0.22);
+            --low:      #3d8b5e;
+            --low-bg:   rgba(61,139,94,0.08);
+            --low-bd:   rgba(61,139,94,0.22);
+            --sans:     'Fira Sans', system-ui, sans-serif;
+            --mono:     'Fira Code', 'Courier New', monospace;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--sans);
+            font-size: 13px;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* header */
+        header {
+            padding: 20px 48px;
+            border-bottom: 1px solid var(--border2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .brand {
+            font-family: var(--mono);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            color: var(--accent);
+            padding: 3px 8px;
+            border: 1px solid var(--border2);
+            background: var(--surface);
+        }
+
+        h1 {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-hi);
+            letter-spacing: 0.02em;
+        }
+
+        .header-right {
+            font-family: var(--mono);
+            font-size: 11.5px;
+            color: var(--text-dim);
+        }
+
+        /* stats strip */
+        .stats {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border2);
+            padding: 0 48px;
+            display: flex;
+        }
+
+        .stat {
+            padding: 14px 28px 14px 0;
+            margin-right: 28px;
+            border-right: 1px solid var(--border2);
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+        .stat:last-child { border-right: none; }
+
+        .stat-n {
+            font-size: 26px;
+            font-weight: 600;
+            line-height: 1;
+            color: var(--text-hi);
+            letter-spacing: -0.02em;
+        }
+        .stat-n.high { color: var(--high); }
+        .stat-n.med  { color: var(--med); }
+        .stat-n.low  { color: var(--low); }
+
+        .stat-l {
+            font-size: 11px;
+            font-weight: 400;
+            color: var(--text-dim);
+        }
+
+        /* main */
+        main {
+            padding: 32px 48px 64px;
+        }
+
+        .section-label {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.28em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 14px;
+        }
+
+        /* alert cards */
+        .alert-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1px;
+            background: var(--border2);
+            border: 1px solid var(--border2);
+            margin-bottom: 40px;
+        }
+
+        .alert-card {
+            background: var(--surface);
+            padding: 22px 26px;
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+            border-left: 3px solid transparent;
+        }
+        .alert-card.HIGH   { border-left-color: var(--high); }
+        .alert-card.MEDIUM { border-left-color: var(--med); }
+        .alert-card.LOW    { border-left-color: var(--low); }
+
+        .alert-sev {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+        .alert-sev::before {
+            content: '';
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .alert-card.HIGH   .alert-sev { color: var(--high); }
+        .alert-card.HIGH   .alert-sev::before { background: var(--high); }
+        .alert-card.MEDIUM .alert-sev { color: var(--med); }
+        .alert-card.MEDIUM .alert-sev::before { background: var(--med); }
+        .alert-card.LOW    .alert-sev { color: var(--low); }
+        .alert-card.LOW    .alert-sev::before { background: var(--low); }
+
+        .alert-type {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-hi);
+        }
+
+        .alert-desc {
+            font-size: 12px;
+            color: var(--text-dim);
+            line-height: 1.6;
+        }
+
+        .alert-ip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--mono);
+            font-size: 11.5px;
+            color: var(--text);
+            margin-top: 2px;
+        }
+        .alert-ip span {
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            background: var(--surface2);
+            padding: 2px 6px;
+        }
+
+        /* table */
+        .table-wrap {
+            border: 1px solid var(--border2);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead tr {
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border2);
+        }
+
+        th {
+            padding: 9px 14px;
+            text-align: left;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            white-space: nowrap;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: background 0.1s;
+        }
+        tbody tr:last-child { border-bottom: none; }
+        tbody tr:hover { background: var(--surface); }
+
+        td {
+            padding: 11px 14px;
+            vertical-align: middle;
+        }
+
+        .td-num {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--text-dim);
+            width: 32px;
+        }
+
+        .td-type {
+            font-family: var(--mono);
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-hi);
+            white-space: nowrap;
+        }
+
+        .sev-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 8px;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            white-space: nowrap;
+            border-radius: 2px;
+        }
+        .sev-pill::before {
+            content: '';
+            width: 5px; height: 5px;
+            border-radius: 50%;
+        }
+        .HIGH   { color: var(--high); background: var(--high-bg); border: 1px solid var(--high-bd); }
+        .HIGH::before   { background: var(--high); }
+        .MEDIUM { color: var(--med);  background: var(--med-bg);  border: 1px solid var(--med-bd); }
+        .MEDIUM::before { background: var(--med); }
+        .LOW    { color: var(--low);  background: var(--low-bg);  border: 1px solid var(--low-bd); }
+        .LOW::before    { background: var(--low); }
+
+        .td-ip {
+            font-family: var(--mono);
+            font-size: 11.5px;
+            color: var(--text-dim);
+            white-space: nowrap;
+        }
+
+        .td-desc {
+            font-size: 12px;
+            color: var(--text-dim);
+            max-width: 380px;
+            line-height: 1.5;
+        }
+
+        .td-logs {
+            font-family: var(--mono);
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--border2);
+            text-align: right;
+            padding-right: 18px;
+        }
+
+        /* empty state */
+        .empty {
+            padding: 56px 40px;
+            text-align: center;
+            color: var(--text-dim);
+        }
+        .empty p {
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+        .empty small {
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: 0.1em;
+            color: var(--border2);
+        }
+
+        /* footer */
+        footer {
+            padding: 13px 48px;
+            border-top: 1px solid var(--border2);
+            display: flex;
+            justify-content: space-between;
+            font-family: var(--mono);
+            font-size: 10.5px;
+            color: var(--text-dim);
+        }
+    </style>
+</head>
+<body>
+
+{# ── Jinja2 computations ── #}
+{% set high_count  = alerts | selectattr('severity', 'equalto', 'HIGH')   | list | length %}
+{% set med_count   = alerts | selectattr('severity', 'equalto', 'MEDIUM') | list | length %}
+{% set low_count   = alerts | selectattr('severity', 'equalto', 'LOW')    | list | length %}
+{% set high_list   = alerts | selectattr('severity', 'equalto', 'HIGH')   | list %}
+{% set med_list    = alerts | selectattr('severity', 'equalto', 'MEDIUM') | list %}
+{% set low_list    = alerts | selectattr('severity', 'equalto', 'LOW')    | list %}
+{% set top2        = (high_list + med_list + low_list)[:2] %}
+
+<header>
+    <div class="header-left">
+        <span class="brand">log-analyzer</span>
+        <h1>Security Report</h1>
+    </div>
+    <div class="header-right">
+        {{ total }} alert{{ 's' if total != 1 }} detected
+    </div>
+</header>
+
+<div class="stats">
+    <div class="stat">
+        <span class="stat-n">{{ total }}</span>
+        <span class="stat-l">Total</span>
+    </div>
+    <div class="stat">
+        <span class="stat-n high">{{ high_count }}</span>
+        <span class="stat-l">High</span>
+    </div>
+    <div class="stat">
+        <span class="stat-n med">{{ med_count }}</span>
+        <span class="stat-l">Medium</span>
+    </div>
+    <div class="stat">
+        <span class="stat-n low">{{ low_count }}</span>
+        <span class="stat-l">Low</span>
+    </div>
+</div>
+
+<main>
+
+    {% if top2 %}
+    <div class="section-label">Priority alerts</div>
+    <div class="alert-grid">
+        {% for t in top2 %}
+        <div class="alert-card {{ t.severity }}">
+            <span class="alert-sev">{{ t.severity }}</span>
+            <div class="alert-type">{{ t.type | replace('_', ' ') | title }}</div>
+            <div class="alert-desc">{{ t.description }}</div>
+            <div class="alert-ip">
+                <span>src</span>
+                {{ t.ip }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="section-label">All alerts</div>
+    <div class="table-wrap">
+        {% if alerts %}
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Type</th>
+                    <th>Severity</th>
+                    <th>IP Address</th>
+                    <th>Description</th>
+                    <th style="text-align:right; padding-right:18px;">Logs</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in alerts %}
+                <tr>
+                    <td class="td-num">{{ loop.index }}</td>
+                    <td class="td-type">{{ item.type }}</td>
+                    <td><span class="sev-pill {{ item.severity }}">{{ item.severity }}</span></td>
+                    <td class="td-ip">{{ item.ip }}</td>
+                    <td class="td-desc">{{ item.description }}</td>
+                    <td class="td-logs">{{ item.logs | length }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty">
+            <p>No alerts detected</p>
+            <small>system clear</small>
+        </div>
+        {% endif %}
+    </div>
+
+</main>
+
+<footer>
+    <span>log-analyzer</span>
+    <span>{{ total }} alert{{ 's' if total != 1 }}</span>
+</footer>
+
+</body>
+</html>
