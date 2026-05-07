@@ -42,22 +42,43 @@ def brute_force_detector(logs:list,window_seconds :int,treshold:int):
                     severity = "MEDIUM"
                 else:
                     severity = "LOW"
-                alertList.append(Alert("brute_force",severity,ip,f"Brute-force attack by {ip} with {len(window)} requests | SEVERITY : {severity}",d[ip]))
+                alertList.append(Alert("brute_force",severity,ip,f"Brute-force attack by {ip} with {len(window)} requests",d[ip]))
                 break
     return alertList
 
 KNOWN_SUSPICIOUS_UA = ["sqlmap", "nikto", "masscan", "nmap", "burpsuite", "zgrab", "nuclei", "dirbuster"]
 
 def user_agent_detector(logs:list):
-    alertList = []
-    ua_logs = [l for l in logs if l.user_agent != None]
+    ua_logs = [l for l in logs if l.user_agent]
+    grouped = {}
+
     for log in ua_logs:
         ua = log.user_agent.lower()
         for tool in KNOWN_SUSPICIOUS_UA:
             if tool in ua:
-                alertList.append(Alert("user_agent","LOW",log.ip,f"User-agent reconnaissance attack by {log.ip} using {ua}",[log]))
+                key = (log.ip, tool)
+                if key in grouped:
+                    grouped[key].logs.append(log)
+                else:
+                    grouped[key] = Alert("user_agent", "LOW", log.ip, f"User-agent reconnaissance attack by {log.ip} using {tool}", [log])
                 break
-    return alertList
+
+    alert_list = []
+    for (ip, tool), alert in grouped.items():
+        n = len(alert.logs)
+        if n >= 20:
+            severity = "HIGH"
+        elif n >= 10:
+            severity = "MEDIUM"
+        else:
+            severity = "LOW"
+        alert.severity = severity
+        alert.description = f"User-agent reconnaissance attack by {ip} using {tool} with {n} requests"
+        alert_list.append(alert)
+
+    return alert_list
+
+
 
 def directory_scan_detector(logs:list,window_seconds:int,treshold:int):
     alertList = []

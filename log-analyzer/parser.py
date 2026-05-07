@@ -62,28 +62,3 @@ def parse_file(path:str, skip_invalid:bool = False):
                 if not skip_invalid:
                     raise ValueError(f"Invalid line format in {path}: {line!r}")
     return res
-
-line1 = '127.0.0.1 ident alice [01/May/2025:07:20:10 +0000] "GET /index.html HTTP/1.1" 200 9481'
-log_entry = parse_line(line1)
-print(log_entry.ip)  # Output: 127.0.0.1
-print(log_entry.rfc)  # Output: ident
-print(log_entry.user)  # Output: alice
-print(log_entry.timestamp)  # Output: 01/May/2025:07:20:10 +0000
-print(log_entry.request)  # Output: GET /index.html HTTP/1.1
-print(log_entry.status)  # Output: 200
-print(log_entry.response_size)  # Output: 9481
-
-line2 = '104.196.220.12 - - [01/May/2025:09:00:00 +0000] "GET /index.html HTTP/1.1" 200 9481 "-" "sqlmap/1.7.8#stable (https://sqlmap.org)"'
-log_entry = parse_line(line2)
-print(log_entry.ip)  # Output: 104.196.220.12
-print(log_entry.rfc)  # Output: -
-print(log_entry.user)  # Output: -
-print(log_entry.timestamp)  # Output: 01/May/2025:09:00:00 +0000
-print(log_entry.request)  # Output: GET /index.html HTTP/1.1
-print(log_entry.status)  # Output: 200
-print(log_entry.response_size)  # Output: 9481
-print(log_entry.referrer)  # Output: -
-print(log_entry.user_agent)  # Output: sqlmap/1.7.8#stable (https://sqlmap.org)
-
-entries = parse_file("samples/test.log", skip_invalid=True)
-print(f"{len(entries)} entrées parsées")
